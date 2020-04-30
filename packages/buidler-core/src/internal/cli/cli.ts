@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import Bugsnag from "@bugsnag/js";
+import Bugsnag, { NotifiableError, OnErrorCallback } from "@bugsnag/js";
 import chalk from "chalk";
 import debug from "debug";
 import semver from "semver";
@@ -43,6 +43,16 @@ function ensureValidNodeVersion(packageJson: PackageJson) {
   }
 }
 
+const bugsnagNotifyAsync = (
+  error: NotifiableError,
+  onError?: OnErrorCallback
+) =>
+  new Promise((resolve, reject) =>
+    Bugsnag.notify(error, onError, (err, res) =>
+      err ? reject(err) : resolve(res)
+    )
+  );
+
 async function main(): Promise<void> {
   // We first accept this argument anywhere, so we know if the user wants
   // stack traces before really parsing the arguments.
@@ -50,10 +60,6 @@ async function main(): Promise<void> {
 
   try {
     const packageJson = await getPackageJson();
-    Bugsnag.start({
-      apiKey: BUGSNAG_API_KEY,
-      appVersion: packageJson.version
-    });
 
     Bugsnag.addMetadata("company", {
       name: "Acme Co.",
@@ -174,7 +180,9 @@ async function main(): Promise<void> {
     log(`Killing Buidler after successfully running task ${taskName}`);
   } catch (error) {
     // TODO here we catch lib run errors.
-    Bugsnag.notify(error);
+    console.time("time: await bugsnagNotifyAsync(error)");
+    await bugsnagNotifyAsync(error);
+    console.timeEnd("time: await bugsnagNotifyAsync(error)");
 
     let isBuidlerError = false;
 
@@ -235,7 +243,16 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+const bugsnagStart = async () => {
+  const { version } = await getPackageJson();
+  Bugsnag.start({
+    apiKey: BUGSNAG_API_KEY,
+    appVersion: version
+  });
+};
+
+bugsnagStart()
+  .then(main)
   .then(() => {
     console.log(`Process completed with exitCode ${process.exitCode}`);
     process.exit(process.exitCode);
