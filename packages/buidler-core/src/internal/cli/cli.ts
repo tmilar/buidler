@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import Bugsnag from "@bugsnag/js";
 import chalk from "chalk";
 import debug from "debug";
 import semver from "semver";
@@ -27,6 +28,8 @@ const log = debug("buidler:core:cli");
 
 const ANALYTICS_SLOW_TASK_THRESHOLD = 300;
 
+const BUGSNAG_API_KEY = "0d1affee077c44232592a0b985b2dca5";
+
 async function printVersionMessage(packageJson: PackageJson) {
   console.log(packageJson.version);
 }
@@ -47,6 +50,15 @@ async function main(): Promise<void> {
 
   try {
     const packageJson = await getPackageJson();
+    Bugsnag.start({
+      apiKey: BUGSNAG_API_KEY,
+      appVersion: packageJson.version
+    });
+
+    Bugsnag.addMetadata("company", {
+      name: "Acme Co.",
+      country: "uk"
+    });
 
     ensureValidNodeVersion(packageJson);
 
@@ -162,6 +174,7 @@ async function main(): Promise<void> {
     log(`Killing Buidler after successfully running task ${taskName}`);
   } catch (error) {
     // TODO here we catch lib run errors.
+    Bugsnag.notify(error);
 
     let isBuidlerError = false;
 
