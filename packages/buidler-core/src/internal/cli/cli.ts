@@ -40,7 +40,7 @@ function ensureValidNodeVersion(packageJson: PackageJson) {
   }
 }
 
-async function main() {
+async function main(): Promise<void> {
   // We first accept this argument anywhere, so we know if the user wants
   // stack traces before really parsing the arguments.
   let showStackTraces = process.argv.includes("--show-stack-traces");
@@ -161,6 +161,8 @@ async function main() {
     }
     log(`Killing Buidler after successfully running task ${taskName}`);
   } catch (error) {
+    // TODO here we catch lib run errors.
+
     let isBuidlerError = false;
 
     if (BuidlerError.isBuidlerError(error)) {
@@ -205,12 +207,26 @@ async function main() {
       }
     }
 
-    process.exit(1);
+    if (isBuidlerError) {
+      const {
+        errorDescriptor: { title }
+      } = error as BuidlerError;
+      console.log("Buidler error title: ", title);
+      if (title === ERRORS.GENERAL.UNSUPPORTED_OPERATION.title) {
+        console.log("Restarting the app...");
+        return main();
+      }
+    }
+
+    process.exitCode = 1;
   }
 }
 
 main()
-  .then(() => process.exit(process.exitCode))
+  .then(() => {
+    console.log(`Process completed with exitCode ${process.exitCode}`);
+    process.exit(process.exitCode);
+  })
   .catch(error => {
     console.error(error);
     process.exit(1);

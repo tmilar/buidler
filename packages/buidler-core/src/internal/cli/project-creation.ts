@@ -9,10 +9,14 @@ import { getRecommendedGitIgnore } from "../core/project-structure";
 import { getPackageJson, getPackageRoot } from "../util/packageInfo";
 
 import { emoji } from "./emoji";
+import { BuidlerError } from "../core/errors";
+import { ERRORS } from "../core/errors-list";
 
 const CREATE_SAMPLE_PROJECT_ACTION = "Create a sample project";
 const CREATE_EMPTY_BUIDLER_CONFIG_ACTION = "Create an empty buidler.config.js";
 const QUIT_ACTION = "Quit";
+const THROW_AND_RESTART_ACTION = "[test] Throw error & Restart";
+const THROW_AND_QUIT_ACTION = "[test] Throw error & Quit";
 
 const SAMPLE_PROJECT_DEPENDENCIES = [
   "@nomiclabs/buidler-waffle",
@@ -157,7 +161,17 @@ async function getAction() {
             message: CREATE_EMPTY_BUIDLER_CONFIG_ACTION,
             value: CREATE_EMPTY_BUIDLER_CONFIG_ACTION
           },
-          { name: QUIT_ACTION, message: QUIT_ACTION, value: QUIT_ACTION }
+          { name: QUIT_ACTION, message: QUIT_ACTION, value: QUIT_ACTION },
+          {
+            name: THROW_AND_RESTART_ACTION,
+            message: THROW_AND_RESTART_ACTION,
+            value: THROW_AND_RESTART_ACTION
+          },
+          {
+            name: THROW_AND_QUIT_ACTION,
+            message: THROW_AND_QUIT_ACTION,
+            value: THROW_AND_QUIT_ACTION
+          }
         ]
       }
     ]);
@@ -183,6 +197,26 @@ export async function createProject() {
 
   if (action === QUIT_ACTION) {
     return;
+  }
+
+  const sleepTime = 3000;
+
+  if (action === THROW_AND_QUIT_ACTION) {
+    console.log(`[TEST] Waiting time: ${sleepTime}ms...`);
+    await new Promise(r => setTimeout(r, sleepTime));
+    console.log(`[TEST] Throwing an error: `);
+    throw new BuidlerError(ERRORS.ARGUMENTS.UNRECOGNIZED_TASK, {
+      task: "mock-task-name"
+    });
+  }
+
+  if (action === THROW_AND_RESTART_ACTION) {
+    console.log(`[TEST] Waiting time: ${sleepTime}ms...`);
+    await new Promise(r => setTimeout(r, sleepTime));
+    console.log(`[TEST] Throwing an error: `);
+    throw new BuidlerError(ERRORS.GENERAL.UNSUPPORTED_OPERATION, {
+      operation: "(- MOCK ERROR: this will cause a restart -)"
+    });
   }
 
   if (action === CREATE_EMPTY_BUIDLER_CONFIG_ACTION) {
